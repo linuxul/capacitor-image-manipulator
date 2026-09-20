@@ -1,15 +1,16 @@
+import UIKit
 import XCTest
 @testable import ImageManipulatorPlugin
 
 class ImageManipulatorPluginTests: XCTestCase {
-    func testEcho() {
-        // This is an example of a functional test case for a plugin.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+    func testResultingDimensionsKeepTheAspectRatio() {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 200), format: format).image { _ in }
 
-        let implementation = ImageManipulatorPlugin()
-        let value = "Hello, World!"
-        let result = implementation.echo(value)
-
-        XCTAssertEqual(value, result)
+        XCTAssertEqual(CGSize(width: 100, height: 50), image.getResultingImageDimensions(maxWidth: 100, maxHeight: 0))
+        XCTAssertEqual(CGSize(width: 100, height: 50), image.getResultingImageDimensions(maxWidth: 0, maxHeight: 50))
+        XCTAssertEqual(CGSize(width: 100, height: 50), image.getResultingImageDimensions(maxWidth: 100, maxHeight: 100))
+        XCTAssertEqual(CGSize(width: 400, height: 200), image.getResultingImageDimensions(maxWidth: 0, maxHeight: 0))
     }
 }

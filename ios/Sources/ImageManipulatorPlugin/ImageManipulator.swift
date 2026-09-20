@@ -1,5 +1,6 @@
 import Capacitor
 import Foundation
+import UIKit
 
 @objc public class ImageManipulator: NSObject {
 

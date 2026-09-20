@@ -9,8 +9,8 @@ public class ImageManipulatorPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "ImageManipulatorPlugin"
     public let jsName = "ImageManipulator"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "getDimensions", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "resize", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "getDimensions", returnType: .promise),
+        CAPPluginMethod(name: "resize", returnType: .promise)
     ]
 
     // NOTE: Error code constants
