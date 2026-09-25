@@ -1,6 +1,6 @@
 {
   "name": "@capacitor-community/image-manipulator",
-  "version": "8.0.0",
+  "version": "9.0.0",
   "description": "The Image Manipulator plugin is designed to manipulate images (resize, compress, crop etc.)",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
@@ -73,7 +73,7 @@
     "typescript": "^5.1.6"
   },
   "peerDependencies": {
-    "@capacitor/core": ">=8.0.0"
+    "@capacitor/core": ">=9.0.0"
   },
   "prettier": "@ionic/prettier-config",
   "swiftlint": "@ionic/swiftlint-config",
