@@ -9,8 +9,8 @@ public class ImageManipulatorPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "ImageManipulatorPlugin"
     public let jsName = "ImageManipulator"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "getDimensions", returnType: .promise),
-        CAPPluginMethod(name: "resize", returnType: .promise)
+        .promise("getDimensions", ImageManipulatorPlugin.getDimensions),
+        .promise("resize", ImageManipulatorPlugin.resize)
     ]
 
     // NOTE: Error code constants
@@ -27,88 +27,86 @@ public class ImageManipulatorPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation = ImageManipulator(bridge: bridge)
     }
 
-    @objc func getDimensions(_ call: CAPPluginCall) {
+    // Both methods stay synchronous on the bridge queue: they touch no UIKit state and answer when the work is done.
+
+    func getDimensions(_ call: CAPPluginCall) throws {
 
         guard let imagePath = call.options["imagePath"] as? String else {
-            call.reject("Must provide an imagePath")
-            return
+            throw CAPPluginError("Must provide an imagePath")
         }
 
         guard let implementation = implementation else {
-            call.reject("Failed to initialize plugin")
-            return
+            throw CAPPluginError("Failed to initialize plugin")
         }
 
+        let dimensions: ImageDimensions
         do {
-            let dimensions: ImageDimensions = try implementation.getDimensions(imagePath: imagePath)
-            call.resolve([
-                "width": dimensions.width,
-                "height": dimensions.height
-            ])
-        } catch ImageManipulatorError.failedToLoadImage {
-            call.reject(ErrorCodes.failedToLoadImage)
-        } catch ImageManipulatorError.failedToCreateImageData {
-            call.reject(ErrorCodes.failedToCreateImageData)
-        } catch ImageManipulatorError.failedToSaveResizedImage {
-            call.reject(ErrorCodes.failedToSaveResizedImage)
-        } catch ImageManipulatorError.failedToGetResizedJPEGImageFromData {
-            call.reject(ErrorCodes.failedToGetResizedJpegImageFromData)
+            dimensions = try implementation.getDimensions(imagePath: imagePath)
         } catch {
-            call.reject(error.localizedDescription, nil, error)
+            throw Self.pluginError(for: error)
         }
+        call.resolve([
+            "width": dimensions.width,
+            "height": dimensions.height
+        ])
     }
 
-    @objc func resize(_ call: CAPPluginCall) {
+    func resize(_ call: CAPPluginCall) throws {
 
         guard let imagePath = call.options["imagePath"] as? String else {
-            call.reject("Must provide an imagePath")
-            return
+            throw CAPPluginError("Must provide an imagePath")
         }
         let fileName = call.getString("fileName")
         let quality = call.getInt("quality", 85)
         let maxWidth = call.getInt("maxWidth", 0)
         let maxHeight = call.getInt("maxHeight", 0)
         if maxWidth <= 0 && maxHeight <= 0 {
-            call.reject("Either maxWidth or maxHeight param must be provided and be greater then 0.")
-            return
+            throw CAPPluginError("Either maxWidth or maxHeight param must be provided and be greater then 0.")
         }
         let fixRotation = call.getBool("fixRotation", false)
 
         guard let implementation = implementation else {
-            call.reject("Failed to initialize plugin")
-            return
+            throw CAPPluginError("Failed to initialize plugin")
         }
 
+        let imageResizingResult: ImageResizingResult
         do {
-            let imageResizingResult: ImageResizingResult = try implementation.resize(
+            imageResizingResult = try implementation.resize(
                 imagePath: imagePath, fileName: fileName, quality: quality,
                 maxWidth: maxWidth, maxHeight: maxHeight, fixRotation: fixRotation
             )
-
-            var result: [String: Any] = [
-                "originalWidth": imageResizingResult.originalWidth,
-                "originalHeight": imageResizingResult.originalHeight,
-                "resizedWidth": imageResizingResult.resizedWidth,
-                "resizedHeight": imageResizingResult.resizedHeight,
-                "imagePath": imageResizingResult.imagePath,
-                "resized": imageResizingResult.resized
-            ]
-            if let webPath = imageResizingResult.webPath, !webPath.isEmpty {
-                result["webPath"] = webPath
-            }
-            call.resolve(result)
-        } catch ImageManipulatorError.failedToLoadImage {
-            call.reject(ErrorCodes.failedToLoadImage)
-        } catch ImageManipulatorError.failedToCreateImageData {
-            call.reject(ErrorCodes.failedToCreateImageData)
-        } catch ImageManipulatorError.failedToSaveResizedImage {
-            call.reject(ErrorCodes.failedToSaveResizedImage)
-        } catch ImageManipulatorError.failedToGetResizedJPEGImageFromData {
-            call.reject(ErrorCodes.failedToGetResizedJpegImageFromData)
         } catch {
-            call.reject(error.localizedDescription, nil, error)
+            throw Self.pluginError(for: error)
         }
 
+        var result: [String: Any] = [
+            "originalWidth": imageResizingResult.originalWidth,
+            "originalHeight": imageResizingResult.originalHeight,
+            "resizedWidth": imageResizingResult.resizedWidth,
+            "resizedHeight": imageResizingResult.resizedHeight,
+            "imagePath": imageResizingResult.imagePath,
+            "resized": imageResizingResult.resized
+        ]
+        if let webPath = imageResizingResult.webPath, !webPath.isEmpty {
+            result["webPath"] = webPath
+        }
+        call.resolve(result)
+    }
+
+    /// The rejection for an error of the implementation: its fixed message, or the error's localized description.
+    private static func pluginError(for error: Error) -> CAPPluginError {
+        switch error {
+        case ImageManipulatorError.failedToLoadImage:
+            return CAPPluginError(ErrorCodes.failedToLoadImage)
+        case ImageManipulatorError.failedToCreateImageData:
+            return CAPPluginError(ErrorCodes.failedToCreateImageData)
+        case ImageManipulatorError.failedToSaveResizedImage:
+            return CAPPluginError(ErrorCodes.failedToSaveResizedImage)
+        case ImageManipulatorError.failedToGetResizedJPEGImageFromData:
+            return CAPPluginError(ErrorCodes.failedToGetResizedJpegImageFromData)
+        default:
+            return CAPPluginError(error.localizedDescription, underlyingError: error)
+        }
     }
 
 }
